@@ -30,11 +30,11 @@ Year: 2001
 DOI: 10.1111/1467-9868.00293
 
 """
+from typing import *
 from numpy.typing import *
 import numpy as np  #Scientific Computational Package
 from gapstatistics.gapstatistics import GapStatistics as gap_statistic  #Optimal Number of Clusters 
 from libmr import MR as meta_recognition_tools  #Weibull Fitting
-from typing import *
 
 class Meros:
 
@@ -51,44 +51,50 @@ class Meros:
     def __init__(
             self,
             activations=None,
-            n_centroids_array=None,
+            targets=None,
+            class_n_centroids=None,
             class_vector_distances=None,
-            verbose=False
+            verbose=True
     ):
         pass
 
-    def _get_optimal_n_centroids(
+    def _compute_class_activations_dict(
             self,
-            activations=None
+            activations,
+            targets
     ):
         pass
 
-    def _get_centroids(
+    def _compute_optimal_n_centroids(
             self,
-            activations=None,
-            n_centroids_array=None
+            class_activations
     ):
         pass
 
-    def _get_distances(
+    def _compute_centroids(
             self,
-            activations=None,
-            centroids=None,
-            n_centroids_array=None
+            class_activations,
+            class_n_centroids
     ):
         pass
 
-    def _get_weibull_models(
+    def _compute_distances(
             self,
-            activations=None,
-            n_centroids_array=None,
-            centroids=None
+            class_activations,
+            centroids
+    ):
+        pass
+
+    def _compute_weibull_models(
+            self,
+            class_activations
     ):
         pass
 
     def  fit(
             self,
-            activations
+            activations,
+            targets
     ):
         pass
 
@@ -107,7 +113,7 @@ class Meros:
 
     def fit_revise(
            self,
-           class_activations,
+           activations,
            targets,
            test_activations 
     ):
@@ -115,8 +121,23 @@ class Meros:
 
     def fit_infer(
             self,
-            class_activations,
+            activations,
             targets,
             test_activations
     ):
+        pass
+
+    def get_class_n_centroids(self):
+        pass
+
+    def get_centroids(self):
+        pass
+
+    def get_distances(self):
+        pass
+
+    def get_weibull_models(self):
+        pass
+
+    def get_params(self):
         pass
