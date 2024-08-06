@@ -232,7 +232,26 @@ class Meros:
             n_clusters: Union[Dict[int, int], str, int],
             max_clusters: int
     )-> Dict[int, int]:
-        
+        """Compute number of centroids to use for each class and which will be used
+           for the distance-to-nearest-centroid approach at Weibull fitting time.
+
+        Args:
+            class_activations (Dict[int, NDArray]): Dictionary with targets: [training 
+                                                    activations]
+            n_clusters (Union[Dict[int, int], str, int]): Specify method to use of an
+                                                          imposed dictionary of the form
+                                                          target: n_centroids. methods are
+                                                          strings and support 'mav' for one centroid
+                                                          and 'gapstat' for gap statistic clustering.
+            max_clusters (int): Number of clusters up to where search for optimal clusters must be performed if
+                                looking for optimal number of clusters.
+
+        Raises:
+            ValueError: Unspecified or invalid method.
+
+        Returns:
+            Dict[int, int]: Dictionary with target:n_centroids.
+        """
         n_centroids_dict={}
 
         if n_clusters == 'mav':
@@ -263,7 +282,13 @@ class Meros:
             class_activations: Dict[int,NDArray],
             class_n_centroids:Dict[int, int]
     ):
-        
+        """Computes and records centroids using K-Means clustering and, for now,
+           exclusively the euclidean distance. Does't return centroids but records them as attribute,
+
+        Args:
+            class_activations (Dict[int,NDArray]): Dictionary of the form target: [activations]
+            class_n_centroids (Dict[int, int]): Dictionary of the form target: n_centroids
+        """
         centroids = {}
         for target, activations in class_activations.items():
             n_clusters = int(class_n_centroids[target])
@@ -278,6 +303,19 @@ class Meros:
             class_activations:Dict[int,NDArray],
             centroids: Dict[int,NDArray]
     )->Dict[int,NDArray] :
+        """Computes distances of class activations from the nearest class centroid.
+           The distribution of these distances characterize the penalty received by a vector that
+           activates its class according to how its structure compares to the structure of the training
+           set, assumed to be a good proxy of the class's ideal representation. See Bendale's OpenMax and
+           EVT calibration (docs on https://github.com/sfeilaryan/MeROS .)
+
+        Args:
+            class_activations (Dict[int,NDArray]): Dictionary of the form target: [activations]
+            centroids (Dict[int,NDArray]): Dictionary of the form target: [class centroids]
+
+        Returns:
+            Dict[int,NDArray]: Dictionary of the form target: [training AV distances].
+        """
         class_distances={}
         for target, activations in class_activations.items():
             distances=[]
@@ -294,6 +332,23 @@ class Meros:
             class_distances:Dict[int,NDArray],
             weibull_tail_dict:Dict[int,NDArray]
     ):
+        """Computes a Weibull fit of the distances and returns the parameters and the median of 
+           the continuous distribution. See documentation on https://github.com/sfeilaryan/MeROS .
+           Weibull is stored - not returned - for revision.
+
+        Args:
+            class_distances (Dict[int,NDArray]): Dictionary of the form target: [training AV distances].
+                                                (int: array with shape (n_class_instances,))
+
+            weibull_tail_dict (Dict[int,NDArray]):Dictionary of the form target: weibull_parameters.
+
+
+
+            In particular, a given class/target's weibull parameters array looks like: (see libmr docs.)
+
+            [scale, shape, threshold sign, threshold absolute value, median]
+
+        """
         class_weibull_parameters = {}
         for target, distances in class_distances.items():
             weibull_tail = weibull_tail_dict[target]
@@ -314,6 +369,55 @@ class Meros:
             n_max_clusters:int=10,
             n_revised_classes:Union[int, None] = None
     ):
+        """Calibrates the object to the training results; the correctly classified activations vectors are sorted into classes
+           and a Weibull model and centroids are computed for each class, so that this calibration can enable test_instance revision
+           and solve open-set recognition at test time using this calibration. See docs.
+
+        Args:
+            activations (Union[Dict[int,NDArray], List[List[float]], NDArray[np.float64], List[NDArray[np.float64]]]): 
+            
+            Array of activations of test_instances. Expected shape: (n_training_samples, n_possible_outputs/n_classes)
+            This is the output of a closed-set classifier! Input can also directly be a dictionary with keys target/class and 
+            values the array of corresponding training activations, in which case targets argument is not read.
+
+            targets (Union[ List[float], NDArray[np.float64], None], optional):
+            
+            Corresponding targets of training instances if array (n_training_samples, n_possible_outputs/n_classes)
+            is provided. This is used to discard misclassified instances when calibrating. If not specified,
+            then activations are taken to have argmax the correct class. Defaults to None.
+
+            n_centers (Union[None, str, NDArray[np.int64]], optional): 
+            
+            Dictionary, integer, or string specifying the number of centroids per class. Supports dictionary
+            of the form target:n_centroids, or integer for constant number across classes, or 'mav' for single mean
+            vectors, or 'gapstat' for a optimal number of clusters according to the gap statistic. Defaults to None.
+
+            weibull_tail (Union[int, float], optional): 
+            
+            Number or proportion of distance data points to use when performing Weibull fit. Chooses the largest values
+            (see libmr.MR.fit_high and Bendale's OpenMax available on GitHub). Choose depending on dataset size. 
+            Defaults to 0.9.
+
+
+            weibull_tail_isfraction (bool, optional): 
+            
+            Determine whether to treat previous argument as a fraction or number. Defaults to True.
+
+            n_max_clusters (int, optional)
+            
+            Maximum clusters to check optimization of cluster number. Defaults to 10.
+
+            n_revised_classes (Union[int, None], optional): 
+             
+            Number of top activations to revise - with a decreasing effect anyway. See revise methods and
+            the documentation on GitHub. Defaults to None, which will cause a revision in all detected targets with revision effect
+            on a given est instance decreasing as activation decreases (we sort the classes to revise by activation; see revise.)
+
+        Raises:
+            ValueError: If non-integer provided as Weibull tail and not specified as fraction.
+
+        No return, model fitted and ready for open-space risk control at test time. See revise method.
+        """
         if isinstance(activations, dict):
             class_activations=np.array(activations)
         else:
@@ -352,6 +456,15 @@ class Meros:
             self,
             test_av: NDArray[np.float64]
     ) -> NDArray[np.float64]:
+        """Perform OpenMax activation revision and compute an activation for the class of unknown unknowns.
+           Called to revise one test_instance. Uses calibration model and parameters.
+
+        Args:
+            test_av (NDArray[np.float64]): Test activations (component indices corresponding to targets.)
+
+        Returns:
+            NDArray[np.float64]: Revised vector, has shape (input_shape[0]+1,)
+        """
         sorted_indices = np.argsort(test_av)[::-1]
         revised_av = np.zeros(test_av.shape[0] + 1)
         for j in range(self.n_revised_classes):
@@ -382,6 +495,17 @@ class Meros:
         test_activations:Union[List[float], NDArray[np.float64]],
         softmaxed:bool=False
     )->NDArray[np.float64]:
+        """Revises of an array of test activations of shape (n_test_instances, n_activations = n_classes).
+
+        Args:
+            test_activations (Union[List[float], NDArray[np.float64]]): Array of test activations.
+            softmaxed (bool, optional): Determines if activations are converted to probabilities using the softmax function.
+                                        Defaults to False.
+
+        Returns:
+            NDArray[np.float64]: Revised activation vectors containing an activation for the unknown class as the last activation
+            (or probability if softmaxed.)
+        """
         self._message(f'Note that largest index (one more than maximum provided target index at fitting time) is UNKNOWN/REJECTED.')
         test_vectors = np.array(test_activations)
         revised_activations = np.zeros((test_vectors.shape[0],test_vectors.shape[1]+1))
@@ -396,6 +520,19 @@ class Meros:
             test_activations:Union[List[float], NDArray[np.float64]],
             threshold:float=0.0
     )->NDArray[np.int64]:
+        """Returns an array of inferences by revising the vectors and selecting the class with the highest probability.
+           Vectors are rejected if they satisfy any of the two criteria:
+
+           1. Highest Probability is that of class unknown (target = -1).
+           2. Highest probability is too low (below threshold)
+
+        Args:
+            test_activations (Union[List[float], NDArray[np.float64]]): Array of test activations (n_instances, n-activations=n_classes)
+            threshold (float, optional): Reject instances as unknown below this probability. Defaults to 0.0.
+
+        Returns:
+            NDArray[np.int64]: array of shape (n_input_instances,) with inferred targets for test instances.
+        """
         self._message(f'Using rejection probability threshold : {threshold}. Note that -1 is UNKNOWN/REJECTED.')
         max_known_target = np.max([i for i in self.weibull_models.keys()])
         inferences = np.zeros()
@@ -421,6 +558,8 @@ class Meros:
             test_activations:Union[List[float], NDArray[np.float64]] = None,
             softmaxed:bool = False
     )->NDArray[np.float64]:
+        """Equivalent to Meros.fit().revise(). See documentation of fit and revise methods.
+        """
         if test_activations is None:
             raise ValueError('Please provide test array!')
         else:
@@ -440,6 +579,8 @@ class Meros:
             test_activations:Union[List[float], NDArray[np.float64]] = None,
             threshold:float = 0.0
     )->NDArray[np.int64]:
+        """Equivalent to Meros.fit().infer(). See documentation of fit and infer methods.
+        """
         if test_activations is None:
             raise ValueError('Please provide test array!')
         else:
@@ -450,11 +591,21 @@ class Meros:
         return
 
     def get_centroids(self)-> Dict[int, NDArray[np.float64]]:
+        """Getter for centroids attributes.
+
+        Returns:
+            Dict[int, NDArray[np.float64]]: Dictionary of form target: [array of centroids]
+        """
         if self.centroids is None:
             self._message('Attribute not assigned yet. Fit (or fit_revise) the wrapper first!')
         return self.centroids
 
     def get_weibull_models(self)-> Dict[int, NDArray[np.float64]]:
+        """Getter for fitted Weibull parameters.
+
+        Returns:
+            Dict[int, NDArray[np.float64]]: Dictionary of form target: weibull parameters. See _compute_weibull_models method doc.
+        """
         if self.weibull_models is None:
             self._message('Attribute not assigned yet. Fit (or fit_revise) the wrapper first!')
         return self.weibull_models
