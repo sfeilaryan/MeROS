@@ -32,14 +32,16 @@ DOI: 10.1111/1467-9868.00293
 """
 from typing import *
 from numpy.typing import *
-import numpy as np  #Scientific Computational Package
-from gapstatistics.gapstatistics import GapStatistics  #Optimal Number of Clusters 
-from libmr import MR as meta_recognition_tools  #Weibull Fitting
-from sklearn.cluster import KMeans  #K-Means Clustering
-from scipy.special import softmax   #Convert Activations into Probabilities
+import numpy as np  # Scientific Computational Package
+from gapstatistics.gapstatistics import GapStatistics  # Optimal Number of Clusters
+from libmr import MR as meta_recognition_tools  # Weibull Fitting
+from sklearn.cluster import KMeans  # K-Means Clustering
+from scipy.special import softmax  # Convert Activations into Probabilities
 
 
-def weibull_pdf(x: NDArray[np.float64], shape: float, scale: float, threshold: float) -> NDArray[np.float64]:
+def weibull_pdf(
+    x: NDArray[np.float64], shape: float, scale: float, threshold: float
+) -> NDArray[np.float64]:
     """Computes PDF of Weibull distribution given shape, scale, and threshold parameters.
 
     Args:
@@ -59,7 +61,10 @@ def weibull_pdf(x: NDArray[np.float64], shape: float, scale: float, threshold: f
         0,
     )
 
-def weibull_cdf(x: NDArray[np.float64], shape:float, scale:float, threshold:float)-> NDArray[np.float64]:
+
+def weibull_cdf(
+    x: NDArray[np.float64], shape: float, scale: float, threshold: float
+) -> NDArray[np.float64]:
     """Computes CDF of Weibull distribution given shape, scale, and threshold parameters.
 
     Args:
@@ -71,14 +76,10 @@ def weibull_cdf(x: NDArray[np.float64], shape:float, scale:float, threshold:floa
     Returns:
         NDArray[np.float64]: Computed CDF value(s).
     """
-    return np.where(
-        x > threshold,
-        1
-        - np.exp(-(((x - threshold) / scale) ** shape)),
-        0
-    )
+    return np.where(x > threshold, 1 - np.exp(-(((x - threshold) / scale) ** shape)), 0)
 
-def weibull_median(shape:float, scale:float, threshold:float)->float:
+
+def weibull_median(shape: float, scale: float, threshold: float) -> float:
     """Computes median of (continuous) Weibull distribution given shape, scale, and threshold parameters.
 
     Args:
@@ -89,7 +90,7 @@ def weibull_median(shape:float, scale:float, threshold:float)->float:
     Returns:
         NDArray[np.float64]: Median value of the distribution. 
     """
-    median = scale*((-np.log(0.5))**(1/shape)) + threshold
+    median = scale * ((-np.log(0.5)) ** (1 / shape)) + threshold
     return median
 
 
@@ -105,10 +106,7 @@ class Meros:
 
     """
 
-    def __init__(
-            self,
-            verbose:bool=True
-    ):
+    def __init__(self, verbose: bool = True):
         """Instance of Meros Object. Performs EVT and MR based calibration using the activations
            of a trained model's training instances (in a closed-set recognition mode) to then revise
            activations at test time and decide compute a rejection probability for each test instance
@@ -117,22 +115,19 @@ class Meros:
         Args:
             verbose (bool, optional): Determines whether process updates/messages are printed. Defaults to True.
         """
-        self.verbose=verbose
-        self.centroids=None
-        self.weibull_models=None
-        self.n_revised_classes=None
+        self.verbose = verbose
+        self.centroids = None
+        self.weibull_models = None
+        self.n_revised_classes = None
 
     def _reset(self):
         """Resets attributes.
         """
-        self.centroids=None
-        self.weibull_models=None
-        self.n_revised_classes=None
+        self.centroids = None
+        self.weibull_models = None
+        self.n_revised_classes = None
 
-    def _message(
-            self,
-            message:str
-    ):
+    def _message(self, message: str):
         """Prints process update/message if verbose is toggled to True.
 
         Args:
@@ -140,11 +135,9 @@ class Meros:
         """
         if self.verbose:
             print(message)
-    
+
     def _compute_class_activations_dict(
-            self,
-            activations:ArrayLike,
-            targets:Union[ArrayLike, None]=None
+        self, activations: ArrayLike, targets: Union[ArrayLike, None] = None
     ) -> Dict[int, NDArray[np.float64]]:
         """Turns an array of activations (presumably some ModelObject.predict output on
            the training set) and creates a dictionary with targets for keys and the 
@@ -170,30 +163,26 @@ class Meros:
                                             as values.
         """
         activations = np.array(activations)
-        class_activations={}
+        class_activations = {}
         for index in range(activations.shape[0]):
             if targets is not None:
-                target=targets[index]
+                target = targets[index]
             else:
                 target = np.argmax(activation)
-            activation=activations[index]
+            activation = activations[index]
             if np.argmax(activation) != target:
                 continue
             elif activation in class_activations:
-                class_activations[target]=[activation]
+                class_activations[target] = [activation]
             else:
                 class_activations.append(activation)
         for key, val in class_activations.items():
-            class_activations[key]=np.array(val)
+            class_activations[key] = np.array(val)
         return class_activations
 
-
     def _compute_n_centroids_class(
-            self,
-            activations: NDArray[np.float64],
-            method: str,
-            max_clusters: int
-    )-> int:
+        self, activations: NDArray[np.float64], method: str, max_clusters: int
+    ) -> int:
         """Given an array of activations, returns the optimal number of clusters to
            use to represent the array based on passed criterion (supports Gap Statistic for now)
            (see documentation.) Based on K-Means with euclidean distance for now.
@@ -213,25 +202,30 @@ class Meros:
         Returns:
             int: Optimal number of centroids/clusters.
         """
-        
-        if method=='gapstat':
+
+        if method == "gapstat":
             gap_statistic_optimizer = GapStatistics(pca_sampling=False)
-            n_clusters_opt= gap_statistic_optimizer.fit_predict(max_clusters, activations)
+            n_clusters_opt = gap_statistic_optimizer.fit_predict(
+                max_clusters, activations
+            )
 
         else:
-            raise ValueError('Unsupported method n_clusters. Use "gapstat" or "mav" or specify cluster numbers (see documentation.)')
-        
-        if n_clusters_opt==max_clusters:
-            self._message('WARNING: Optimal cluster number coincides with provided maximum n_clusters.')
+            raise ValueError(
+                'Unsupported method n_clusters. Use "gapstat" or "mav" or specify cluster numbers (see documentation.)'
+            )
+
+        if n_clusters_opt == max_clusters:
+            self._message(
+                "WARNING: Optimal cluster number coincides with provided maximum n_clusters."
+            )
         return n_clusters_opt
-        
 
     def _compute_optimal_n_centroids_dict(
-            self,
-            class_activations: Dict[int, NDArray],
-            n_clusters: Union[Dict[int, int], str, int],
-            max_clusters: int
-    )-> Dict[int, int]:
+        self,
+        class_activations: Dict[int, NDArray],
+        n_clusters: Union[Dict[int, int], str, int],
+        max_clusters: int,
+    ) -> Dict[int, int]:
         """Compute number of centroids to use for each class and which will be used
            for the distance-to-nearest-centroid approach at Weibull fitting time.
 
@@ -252,9 +246,9 @@ class Meros:
         Returns:
             Dict[int, int]: Dictionary with target:n_centroids.
         """
-        n_centroids_dict={}
+        n_centroids_dict = {}
 
-        if n_clusters == 'mav':
+        if n_clusters == "mav":
             for key in class_activations.keys():
                 n_centroids_dict[key] = 1
 
@@ -264,23 +258,21 @@ class Meros:
 
         elif isinstance(n_clusters, str):
             for key, activations in class_activations.items():
-                n_centroids_dict[key] = self._compute_n_centroids_class(activations,
-                                                                        n_clusters,
-                                                                        max_clusters)
-        elif isinstance(n_clusters,dict):
+                n_centroids_dict[key] = self._compute_n_centroids_class(
+                    activations, n_clusters, max_clusters
+                )
+        elif isinstance(n_clusters, dict):
             n_centroids_dict = n_clusters
 
         else:
-            raise ValueError('Unsupported method n_clusters. Use "gapstat" or "mav" or specify cluster numbers (see documentation.)')
-     
+            raise ValueError(
+                'Unsupported method n_clusters. Use "gapstat" or "mav" or specify cluster numbers (see documentation.)'
+            )
+
         return n_centroids_dict
 
-            
-
     def _compute_centroids(
-            self,
-            class_activations: Dict[int,NDArray],
-            class_n_centroids:Dict[int, int]
+        self, class_activations: Dict[int, NDArray], class_n_centroids: Dict[int, int]
     ):
         """Computes and records centroids using K-Means clustering and, for now,
            exclusively the euclidean distance. Does't return centroids but records them as attribute,
@@ -292,17 +284,14 @@ class Meros:
         centroids = {}
         for target, activations in class_activations.items():
             n_clusters = int(class_n_centroids[target])
-            kmeans_clusterer=KMeans(n_clusters)
+            kmeans_clusterer = KMeans(n_clusters)
             kmeans_clusterer.fit(activations)
-            centroids[target]=kmeans_clusterer.cluster_centers_
-        self.centroids=centroids
-        
+            centroids[target] = kmeans_clusterer.cluster_centers_
+        self.centroids = centroids
 
     def _compute_distances(
-            self,
-            class_activations:Dict[int,NDArray],
-            centroids: Dict[int,NDArray]
-    )->Dict[int,NDArray] :
+        self, class_activations: Dict[int, NDArray], centroids: Dict[int, NDArray]
+    ) -> Dict[int, NDArray]:
         """Computes distances of class activations from the nearest class centroid.
            The distribution of these distances characterize the penalty received by a vector that
            activates its class according to how its structure compares to the structure of the training
@@ -316,21 +305,21 @@ class Meros:
         Returns:
             Dict[int,NDArray]: Dictionary of the form target: [training AV distances].
         """
-        class_distances={}
+        class_distances = {}
         for target, activations in class_activations.items():
-            distances=[]
-            centers=centroids[target]
+            distances = []
+            centers = centroids[target]
             for activation in activations:
-                center_distances = [np.linalg.norm(activation-center) for center in centers]
-                nearest_center_distance= np.min(center_distances)
+                center_distances = [
+                    np.linalg.norm(activation - center) for center in centers
+                ]
+                nearest_center_distance = np.min(center_distances)
                 distances.append(nearest_center_distance)
             class_distances[target] = distances
         return class_distances
 
     def _compute_weibull_models(
-            self,
-            class_distances:Dict[int,NDArray],
-            weibull_tail_dict:Dict[int,NDArray]
+        self, class_distances: Dict[int, NDArray], weibull_tail_dict: Dict[int, NDArray]
     ):
         """Computes a Weibull fit of the distances and returns the parameters and the median of 
            the continuous distribution. See documentation on https://github.com/sfeilaryan/MeROS .
@@ -352,22 +341,29 @@ class Meros:
         class_weibull_parameters = {}
         for target, distances in class_distances.items():
             weibull_tail = weibull_tail_dict[target]
-            mr_object=meta_recognition_tools.fit_high(distances, weibull_tail)
+            mr_object = meta_recognition_tools.fit_high(distances, weibull_tail)
             wb_model = mr_object.get_params()
-            wb_median = weibull_median(wb_model[1], wb_model[0], wb_model[2]*wb_model[3])
-            wb_model[4]=wb_median
-            class_weibull_parameters[target]=wb_model
+            wb_median = weibull_median(
+                wb_model[1], wb_model[0], wb_model[2] * wb_model[3]
+            )
+            wb_model[4] = wb_median
+            class_weibull_parameters[target] = wb_model
         self.weibull_models = class_weibull_parameters
 
-    def  fit(
-            self,
-            activations:Union[Dict[int,NDArray], List[List[float]], NDArray[np.float64], List[NDArray[np.float64]]],
-            targets: Union[ List[float], NDArray[np.float64], None] =None,
-            n_centers:Union[None, str, NDArray[np.int64]] =None,
-            weibull_tail:Union[int, float]=0.9,
-            weibull_tail_isfraction:bool=True,
-            n_max_clusters:int=10,
-            n_revised_classes:Union[int, None] = None
+    def fit(
+        self,
+        activations: Union[
+            Dict[int, NDArray],
+            List[List[float]],
+            NDArray[np.float64],
+            List[NDArray[np.float64]],
+        ],
+        targets: Union[List[float], NDArray[np.float64], None] = None,
+        n_centers: Union[None, str, NDArray[np.int64]] = None,
+        weibull_tail: Union[int, float] = 0.9,
+        weibull_tail_isfraction: bool = True,
+        n_max_clusters: int = 10,
+        n_revised_classes: Union[int, None] = None,
     ):
         """Calibrates the object to the training results; the correctly classified activations vectors are sorted into classes
            and a Weibull model and centroids are computed for each class, so that this calibration can enable test_instance revision
@@ -419,43 +415,43 @@ class Meros:
         No return, model fitted and ready for open-space risk control at test time. See revise method.
         """
         if isinstance(activations, dict):
-            class_activations=np.array(activations)
+            class_activations = np.array(activations)
         else:
             if targets is None:
-                self._message('Targets not given. Assuming all activations yield correct classification.')
-            class_activations=self._compute_class_activations_dict(activations)
-        
-        if n_centers is None:
-            self._message('No centroid selection method provided. Using MAVs - one centroid per class (see documentation.)')
-            n_centers='mav'
+                self._message(
+                    "Targets not given. Assuming all activations yield correct classification."
+                )
+            class_activations = self._compute_class_activations_dict(activations)
 
-        n_centroids = self._compute_optimal_n_centroids_dict(class_activations,
-                                                                  n_centers,
-                                                                  n_max_clusters)
+        if n_centers is None:
+            self._message(
+                "No centroid selection method provided. Using MAVs - one centroid per class (see documentation.)"
+            )
+            n_centers = "mav"
+
+        n_centroids = self._compute_optimal_n_centroids_dict(
+            class_activations, n_centers, n_max_clusters
+        )
         self._compute_centroids(class_activations, n_centroids)
-        distances =self._compute_distances(self.class_activations, self.centroids)
-        if (not(weibull_tail_isfraction)) and (not(isinstance(weibull_tail, int))):
-            raise ValueError('Provide fraction argument or whole number')
-        
+        distances = self._compute_distances(self.class_activations, self.centroids)
+        if (not (weibull_tail_isfraction)) and (not (isinstance(weibull_tail, int))):
+            raise ValueError("Provide fraction argument or whole number")
+
         weibull_tail_dict = {}
         if weibull_tail_isfraction:
             for target, activations in class_activations:
-                weibull_tail_dict[target] = int(weibull_tail*activations.shape[0])
+                weibull_tail_dict[target] = int(weibull_tail * activations.shape[0])
         else:
             for target, activations in class_activations:
                 weibull_tail_dict[target] = int(weibull_tail)
-        self._compute_weibull_models(
-            distances, 
-            weibull_tail_dict
-        )
+        self._compute_weibull_models(distances, weibull_tail_dict)
         if n_revised_classes is None:
-            self._message('No specified number of top activations to revise; calibrated to revise all activations with decreasing effect.')
+            self._message(
+                "No specified number of top activations to revise; calibrated to revise all activations with decreasing effect."
+            )
             self.n_revised_classes = max([i for i in self.class_activations.keys()])
 
-    def _revise_vector(
-            self,
-            test_av: NDArray[np.float64]
-    ) -> NDArray[np.float64]:
+    def _revise_vector(self, test_av: NDArray[np.float64]) -> NDArray[np.float64]:
         """Perform OpenMax activation revision and compute an activation for the class of unknown unknowns.
            Called to revise one test_instance. Uses calibration model and parameters.
 
@@ -477,24 +473,31 @@ class Meros:
             shift = self.weibull_models[target][2] * self.weibull_models[target][3]
             median = self.weibull_models[target][4]
 
-            distance = np.min([np.linalg.norm(test_av - centroid) for centroid in self.centroids[target]])
+            distance = np.min(
+                [
+                    np.linalg.norm(test_av - centroid)
+                    for centroid in self.centroids[target]
+                ]
+            )
 
             evaluated_cdf = weibull_cdf(distance, shape, scale, shift)
             shift_from_median = distance - median
             opposite_cdf = weibull_cdf(median - shift_from_median, shape, scale, shift)
-            revision_coefficient = (np.abs(evaluated_cdf - opposite_cdf))*(1 - i/self.n_revised_classes)
-            revised_av[target] *= (1 - revision_coefficient)
+            revision_coefficient = (np.abs(evaluated_cdf - opposite_cdf)) * (
+                1 - i / self.n_revised_classes
+            )
+            revised_av[target] *= 1 - revision_coefficient
             unknown_activation += test_av[target] * (revision_coefficient)
 
         revised_av[-1] = unknown_activation
-        
+
         return revised_av
 
     def revise(
         self,
-        test_activations:Union[List[float], NDArray[np.float64]],
-        softmaxed:bool=False
-    )->NDArray[np.float64]:
+        test_activations: Union[List[float], NDArray[np.float64]],
+        softmaxed: bool = False,
+    ) -> NDArray[np.float64]:
         """Revises of an array of test activations of shape (n_test_instances, n_activations = n_classes).
 
         Args:
@@ -506,20 +509,24 @@ class Meros:
             NDArray[np.float64]: Revised activation vectors containing an activation for the unknown class as the last activation
             (or probability if softmaxed.)
         """
-        self._message(f'Note that largest index (one more than maximum provided target index at fitting time) is UNKNOWN/REJECTED.')
+        self._message(
+            f"Note that largest index (one more than maximum provided target index at fitting time) is UNKNOWN/REJECTED."
+        )
         test_vectors = np.array(test_activations)
-        revised_activations = np.zeros((test_vectors.shape[0],test_vectors.shape[1]+1))
+        revised_activations = np.zeros(
+            (test_vectors.shape[0], test_vectors.shape[1] + 1)
+        )
         for index in range(test_vectors.shape[0]):
             revised_activations[index] = self._revise_vector(test_vectors[index])
         if softmaxed:
-            revised_activations=softmax(revised_activations, axis=1)
+            revised_activations = softmax(revised_activations, axis=1)
         return revised_activations
 
     def infer(
-            self,
-            test_activations:Union[List[float], NDArray[np.float64]],
-            threshold:float=0.0
-    )->NDArray[np.int64]:
+        self,
+        test_activations: Union[List[float], NDArray[np.float64]],
+        threshold: float = 0.0,
+    ) -> NDArray[np.int64]:
         """Returns an array of inferences by revising the vectors and selecting the class with the highest probability.
            Vectors are rejected if they satisfy any of the two criteria:
 
@@ -533,78 +540,108 @@ class Meros:
         Returns:
             NDArray[np.int64]: array of shape (n_input_instances,) with inferred targets for test instances.
         """
-        self._message(f'Using rejection probability threshold : {threshold}. Note that -1 is UNKNOWN/REJECTED.')
+        self._message(
+            f"Using rejection probability threshold : {threshold}. Note that -1 is UNKNOWN/REJECTED."
+        )
         max_known_target = np.max([i for i in self.weibull_models.keys()])
         inferences = np.zeros()
-        revised_probabilities=self.revise(test_activations, True)
+        revised_probabilities = self.revise(test_activations, True)
         for i in range(revised_probabilities.shape[0]):
             inference = np.argmax(revised_probabilities[i])
             confidence = revised_probabilities[i][inference]
-            if confidence<threshold or inference> max_known_target:
-                inference=-1
+            if confidence < threshold or inference > max_known_target:
+                inference = -1
             inferences[i] = inference
         return inferences
 
-
     def fit_revise(
-            self,
-            activations:Union[Dict[int,NDArray], List[List[float]], NDArray[np.float64], List[NDArray[np.float64]]],
-            targets: Union[ List[float], NDArray[np.float64], None] =None,
-            n_centers:Union[None, str, NDArray[np.int64]] =None,
-            weibull_tail:Union[int, float]=0.9,
-            weibull_tail_isfraction:bool=True,
-            n_max_clusters:int=10,
-            n_revised_classes:Union[int, None] = None,
-            test_activations:Union[List[float], NDArray[np.float64]] = None,
-            softmaxed:bool = False
-    )->NDArray[np.float64]:
+        self,
+        activations: Union[
+            Dict[int, NDArray],
+            List[List[float]],
+            NDArray[np.float64],
+            List[NDArray[np.float64]],
+        ],
+        targets: Union[List[float], NDArray[np.float64], None] = None,
+        n_centers: Union[None, str, NDArray[np.int64]] = None,
+        weibull_tail: Union[int, float] = 0.9,
+        weibull_tail_isfraction: bool = True,
+        n_max_clusters: int = 10,
+        n_revised_classes: Union[int, None] = None,
+        test_activations: Union[List[float], NDArray[np.float64]] = None,
+        softmaxed: bool = False,
+    ) -> NDArray[np.float64]:
         """Equivalent to Meros.fit().revise(). See documentation of fit and revise methods.
         """
         if test_activations is None:
-            raise ValueError('Please provide test array!')
+            raise ValueError("Please provide test array!")
         else:
-            self.fit(activations,targets,n_centers,weibull_tail, weibull_tail_isfraction,
-                            n_max_clusters, n_revised_classes)
+            self.fit(
+                activations,
+                targets,
+                n_centers,
+                weibull_tail,
+                weibull_tail_isfraction,
+                n_max_clusters,
+                n_revised_classes,
+            )
             return self.revise(test_activations, softmaxed)
 
     def fit_infer(
-            self,
-            activations:Union[Dict[int,NDArray], List[List[float]], NDArray[np.float64], List[NDArray[np.float64]]],targets: Union[ List[float], NDArray[np.float64], None] =   None,
-            n_centers:Union[None, str, NDArray[np.int64]] =None,
-            weibull_tail:Union[int, float]=0.9,
-            weibull_tail_isfraction:bool=True,
-            n_max_clusters:int=10,
-            n_revised_classes:Union[int, None] = None,
-            test_activations:Union[List[float], NDArray[np.float64]] = None,
-            threshold:float = 0.0
-    )->NDArray[np.int64]:
+        self,
+        activations: Union[
+            Dict[int, NDArray],
+            List[List[float]],
+            NDArray[np.float64],
+            List[NDArray[np.float64]],
+        ],
+        targets: Union[List[float], NDArray[np.float64], None] = None,
+        n_centers: Union[None, str, NDArray[np.int64]] = None,
+        weibull_tail: Union[int, float] = 0.9,
+        weibull_tail_isfraction: bool = True,
+        n_max_clusters: int = 10,
+        n_revised_classes: Union[int, None] = None,
+        test_activations: Union[List[float], NDArray[np.float64]] = None,
+        threshold: float = 0.0,
+    ) -> NDArray[np.int64]:
         """Equivalent to Meros.fit().infer(). See documentation of fit and infer methods.
         """
         if test_activations is None:
-            raise ValueError('Please provide test array!')
+            raise ValueError("Please provide test array!")
         else:
-            self.fit(activations,targets,n_centers,weibull_tail, weibull_tail_isfraction,
-                            n_max_clusters, n_revised_classes)
+            self.fit(
+                activations,
+                targets,
+                n_centers,
+                weibull_tail,
+                weibull_tail_isfraction,
+                n_max_clusters,
+                n_revised_classes,
+            )
             return self.infer(test_activations, threshold)
 
         return
 
-    def get_centroids(self)-> Dict[int, NDArray[np.float64]]:
+    def get_centroids(self) -> Dict[int, NDArray[np.float64]]:
         """Getter for centroids attributes.
 
         Returns:
             Dict[int, NDArray[np.float64]]: Dictionary of form target: [array of centroids]
         """
         if self.centroids is None:
-            self._message('Attribute not assigned yet. Fit (or fit_revise) the wrapper first!')
+            self._message(
+                "Attribute not assigned yet. Fit (or fit_revise) the wrapper first!"
+            )
         return self.centroids
 
-    def get_weibull_models(self)-> Dict[int, NDArray[np.float64]]:
+    def get_weibull_models(self) -> Dict[int, NDArray[np.float64]]:
         """Getter for fitted Weibull parameters.
 
         Returns:
             Dict[int, NDArray[np.float64]]: Dictionary of form target: weibull parameters. See _compute_weibull_models method doc.
         """
         if self.weibull_models is None:
-            self._message('Attribute not assigned yet. Fit (or fit_revise) the wrapper first!')
+            self._message(
+                "Attribute not assigned yet. Fit (or fit_revise) the wrapper first!"
+            )
         return self.weibull_models
