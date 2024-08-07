@@ -569,8 +569,7 @@ class Meros:
 
     def fit_infer(
             self,
-            activations:Union[Dict[int,NDArray], List[List[float]], NDArray[np.float64], List[NDArray[np.float64]]],
-            targets: Union[ List[float], NDArray[np.float64], None] = None,
+            activations:Union[Dict[int,NDArray], List[List[float]], NDArray[np.float64], List[NDArray[np.float64]]],targets: Union[ List[float], NDArray[np.float64], None] =   None,
             n_centers:Union[None, str, NDArray[np.int64]] =None,
             weibull_tail:Union[int, float]=0.9,
             weibull_tail_isfraction:bool=True,
