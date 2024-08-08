@@ -8,7 +8,7 @@ with open("requirements.txt", "r") as file:
 
 setup(
     name="meros",
-    version="0.0.0",
+    version="0.0.1",
     packages=["source"],
     license="BSD-3-Clause",
     install_requires=requirements,
