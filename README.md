@@ -4,7 +4,11 @@ This python package essentially consists of a compact wrapper for meta-recogniti
 
 ## Installation
 
-TBD
+Available on PyPI with very weak dependencies (check out `requirements.txt` for now but basic packages, the versions of which have only been pinned because they have been tested on these versions but the accessed objects are most probably available on most versions of these packages; see documentation.)
+
+```
+pip install meros
+```
 
 ## Motivation & Preliminary Information
 Typical neural networks used for classification tasks and problems are limited to closed-set classification by nature. The typical output activations resultant from a test input are usually converted to a discrete probability distribution reflecting the model's relative confidences exclusively over the classes or targets it has encountered at training time. Hence, feeding the model an input that doesn't correspond to any of the target classes still results in confidences over the aforementioned target classes that add up to 1 as a result of the softmax operation applied on the model's penultimate layer. In a lot of real-world deployment settings, our models can and will encounter new behavior it has not encountered at training time and should know to detect/reject/signal these events for designer investigation and a possible reconsideration of the model's training. This is the heart of open-set classification and recognition. 

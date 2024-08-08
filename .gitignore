@@ -1,3 +1,6 @@
 **/scratch*
 **/.vscode/
 .venv/
+/dist/
+meros.egg-info/
+build/
