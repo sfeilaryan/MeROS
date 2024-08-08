@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 with open("README.md", "r") as f:
     long_description = f.read()
@@ -9,7 +9,7 @@ with open("requirements.txt", "r") as file:
 setup(
     name="meros",
     version="0.0.1",
-    packages=["source"],
+    packages=find_packages(),
     license="BSD-3-Clause",
     install_requires=requirements,
     long_description=long_description,
