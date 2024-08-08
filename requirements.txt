@@ -1,0 +1,8 @@
+Cython==3.0.11
+gapstatistics==0.1.5
+joblib==1.4.2
+libmr==0.1.9
+numpy==2.0.1
+scikit-learn==1.5.1
+scipy==1.13.1
+threadpoolctl==3.5.0

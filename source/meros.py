@@ -30,6 +30,7 @@ Year: 2001
 DOI: 10.1111/1467-9868.00293
 
 """
+
 from typing import *
 from numpy.typing import *
 import numpy as np  # Scientific Computational Package
@@ -47,7 +48,7 @@ def weibull_pdf(
     Args:
         x (NDArray[np.float64]): value(s) at which to evaluate PDF.
         shape (float): Weibull shape parameter.
-        scale (float): Weibull scale parameter. 
+        scale (float): Weibull scale parameter.
         threshold (float): Weibull threshold parameter.
 
     Returns:
@@ -70,7 +71,7 @@ def weibull_cdf(
     Args:
         x (NDArray[np.float64]): value(s) at which to evaluate CDF.
         shape (float): Weibull shape parameter.
-        scale (float): Weibull scale parameter. 
+        scale (float): Weibull scale parameter.
         threshold (float): Weibull threshold parameter.
 
     Returns:
@@ -84,18 +85,17 @@ def weibull_median(shape: float, scale: float, threshold: float) -> float:
 
     Args:
         shape (float): Weibull shape parameter.
-        scale (float): Weibull scale parameter. 
+        scale (float): Weibull scale parameter.
         threshold (float): Weibull threshold parameter.
 
     Returns:
-        NDArray[np.float64]: Median value of the distribution. 
+        NDArray[np.float64]: Median value of the distribution.
     """
     median = scale * ((-np.log(0.5)) ** (1 / shape)) + threshold
     return median
 
 
 class Meros:
-
     """
     Interface for calibration based on EVT as well as vector revision based
     on Bendale's formal solution to Open-Set recognition along with our own modifications
@@ -121,8 +121,7 @@ class Meros:
         self.n_revised_classes = None
 
     def _reset(self):
-        """Resets attributes.
-        """
+        """Resets attributes."""
         self.centroids = None
         self.weibull_models = None
         self.n_revised_classes = None
@@ -140,7 +139,7 @@ class Meros:
         self, activations: ArrayLike, targets: Union[ArrayLike, None] = None
     ) -> Dict[int, NDArray[np.float64]]:
         """Turns an array of activations (presumably some ModelObject.predict output on
-           the training set) and creates a dictionary with targets for keys and the 
+           the training set) and creates a dictionary with targets for keys and the
            activations of the (correctly classified) training instances of a the given targets
            in an array as values. If targets are specified (and they are expected to be
            integers numbered from 0 to n_classes-1 so that they can be used an indices)
@@ -153,7 +152,7 @@ class Meros:
             activations (ArrayLike): Two-dimensional array of shape (n_samples, n_classes)
                                     corresponding to training instance activations.
 
-            targets (Union[ArrayLike, None], optional): Corresponding targets. If not 
+            targets (Union[ArrayLike, None], optional): Corresponding targets. If not
                                                         specified then assumed argmax
                                                         of activations.
                                                         Defaults to None.
@@ -230,7 +229,7 @@ class Meros:
            for the distance-to-nearest-centroid approach at Weibull fitting time.
 
         Args:
-            class_activations (Dict[int, NDArray]): Dictionary with targets: [training 
+            class_activations (Dict[int, NDArray]): Dictionary with targets: [training
                                                     activations]
             n_clusters (Union[Dict[int, int], str, int]): Specify method to use of an
                                                           imposed dictionary of the form
@@ -321,7 +320,7 @@ class Meros:
     def _compute_weibull_models(
         self, class_distances: Dict[int, NDArray], weibull_tail_dict: Dict[int, NDArray]
     ):
-        """Computes a Weibull fit of the distances and returns the parameters and the median of 
+        """Computes a Weibull fit of the distances and returns the parameters and the median of
            the continuous distribution. See documentation on https://github.com/sfeilaryan/MeROS .
            Weibull is stored - not returned - for revision.
 
@@ -370,41 +369,41 @@ class Meros:
            and solve open-set recognition at test time using this calibration. See docs.
 
         Args:
-            activations (Union[Dict[int,NDArray], List[List[float]], NDArray[np.float64], List[NDArray[np.float64]]]): 
-            
+            activations (Union[Dict[int,NDArray], List[List[float]], NDArray[np.float64], List[NDArray[np.float64]]]):
+
             Array of activations of test_instances. Expected shape: (n_training_samples, n_possible_outputs/n_classes)
-            This is the output of a closed-set classifier! Input can also directly be a dictionary with keys target/class and 
+            This is the output of a closed-set classifier! Input can also directly be a dictionary with keys target/class and
             values the array of corresponding training activations, in which case targets argument is not read.
 
             targets (Union[ List[float], NDArray[np.float64], None], optional):
-            
+
             Corresponding targets of training instances if array (n_training_samples, n_possible_outputs/n_classes)
             is provided. This is used to discard misclassified instances when calibrating. If not specified,
             then activations are taken to have argmax the correct class. Defaults to None.
 
-            n_centers (Union[None, str, NDArray[np.int64]], optional): 
-            
+            n_centers (Union[None, str, NDArray[np.int64]], optional):
+
             Dictionary, integer, or string specifying the number of centroids per class. Supports dictionary
             of the form target:n_centroids, or integer for constant number across classes, or 'mav' for single mean
             vectors, or 'gapstat' for a optimal number of clusters according to the gap statistic. Defaults to None.
 
-            weibull_tail (Union[int, float], optional): 
-            
+            weibull_tail (Union[int, float], optional):
+
             Number or proportion of distance data points to use when performing Weibull fit. Chooses the largest values
-            (see libmr.MR.fit_high and Bendale's OpenMax available on GitHub). Choose depending on dataset size. 
+            (see libmr.MR.fit_high and Bendale's OpenMax available on GitHub). Choose depending on dataset size.
             Defaults to 0.9.
 
 
-            weibull_tail_isfraction (bool, optional): 
-            
+            weibull_tail_isfraction (bool, optional):
+
             Determine whether to treat previous argument as a fraction or number. Defaults to True.
 
             n_max_clusters (int, optional)
-            
+
             Maximum clusters to check optimization of cluster number. Defaults to 10.
 
-            n_revised_classes (Union[int, None], optional): 
-             
+            n_revised_classes (Union[int, None], optional):
+
             Number of top activations to revise - with a decreasing effect anyway. See revise methods and
             the documentation on GitHub. Defaults to None, which will cause a revision in all detected targets with revision effect
             on a given est instance decreasing as activation decreases (we sort the classes to revise by activation; see revise.)
@@ -571,8 +570,7 @@ class Meros:
         test_activations: Union[List[float], NDArray[np.float64]] = None,
         softmaxed: bool = False,
     ) -> NDArray[np.float64]:
-        """Equivalent to Meros.fit().revise(). See documentation of fit and revise methods.
-        """
+        """Equivalent to Meros.fit().revise(). See documentation of fit and revise methods."""
         if test_activations is None:
             raise ValueError("Please provide test array!")
         else:
@@ -604,8 +602,7 @@ class Meros:
         test_activations: Union[List[float], NDArray[np.float64]] = None,
         threshold: float = 0.0,
     ) -> NDArray[np.int64]:
-        """Equivalent to Meros.fit().infer(). See documentation of fit and infer methods.
-        """
+        """Equivalent to Meros.fit().infer(). See documentation of fit and infer methods."""
         if test_activations is None:
             raise ValueError("Please provide test array!")
         else:
