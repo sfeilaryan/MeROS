@@ -47,7 +47,7 @@ If you use this software in your research, please cite it as follows:
 @software{sfeila_ryan_2024,
   author = {Ryan Sfeila},
   title = {MeROS - Meta-Recognition Tools for Open-Set Classification},
-  version = {1.0.0},
+  version = {0.0.3},
   year = {2024},
   url = {https://github.com/sfeilaryan/MeROS},
   license = {BSD-3-Clause}
