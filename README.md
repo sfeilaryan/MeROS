@@ -52,7 +52,7 @@ If you use this software in your research, please cite it as follows:
   url = {https://github.com/sfeilaryan/MeROS},
   license = {BSD-3-Clause}
 }
-
+```
 
 
 ## Important Notes: Deviations from Bendale and Boult's Paper
