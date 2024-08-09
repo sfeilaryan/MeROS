@@ -40,6 +40,20 @@ These motivations motivate the following procedure. When revising the $i$-th mos
 - **We record this coefficient and multiply by $\frac{\alpha - i}{\alpha}$:** this pertains to the second bullet point in the above list and weights the revising effect by the class's rank, so that only the highest activations are strongly revised. This could have been an exponent and the fact that it is a coefficient is inspired from the methodology outlined in [[1]](#1).
 
 We end up with an unknown activation which we append to the AV, which is then softmaxed. The instance is deemed unknown if either the unknown class has the highest probability or if the highest probability is below a preset threshold. Thus, to beat OpenMax, a test AV has to avoid activating the unknown class by conforming to the structure of activated classes individually and also has to avoid activating several classes or the renormalization will bring down the probability below the threshold. In SoftMax it is not required to actually highly activate the fooling target as long as the relative activations of the other classes are substantially lower to bypass the threshold and rejection mechanism. Revision is done with the `revise` and `infer` methods, where the latter applies the rejection criteria.
+## Citation
+If you use this software in your research, please cite it as follows:
+
+```bibtex
+@software{sfeila_ryan_2024,
+  author = {Ryan Sfeila},
+  title = {MeROS - Meta-Recognition Tools for Open-Set Classification},
+  version = {1.0.0},
+  year = {2024},
+  url = {https://github.com/sfeilaryan/MeROS},
+  license = {BSD-3-Clause}
+}
+
+
 
 ## Important Notes: Deviations from Bendale and Boult's Paper
 It is important to note that the revision schemes discussed above as well as the multiple centroid approach are not implemented in the paper that has directed most of what this package implements. It's been empirically verified by the author a audio recognition case that these new implementations do enhance the mechanism. The reader is invited to contact the author for more details regarding this case.
