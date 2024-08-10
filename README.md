@@ -56,7 +56,7 @@ If you use this software in your research, please cite it as follows:
 
 
 ## Important Notes: Deviations from Bendale and Boult's Paper
-It is important to note that the revision schemes discussed above as well as the multiple centroid approach are not implemented in the paper that has directed most of what this package implements. It's been empirically verified by the author a audio recognition case that these new implementations do enhance the mechanism. The reader is invited to contact the author for more details regarding this case.
+It is important to note that the revision schemes discussed above as well as the multiple centroid approach are not implemented in the paper that has directed most of what this package implements. It's been empirically verified by the author on an audio recognition case that these new implementations do enhance the mechanism. The reader is invited to contact the author for more details regarding this case.
 ## Upcoming Updates
 ### Documentation
 - Demonstrations and Tutorials
