@@ -33,6 +33,7 @@ DOI: 10.1111/1467-9868.00293
 
 from typing import *
 from numpy.typing import *
+from warnings import warn
 import numpy as np  # Scientific Computational Package
 from gapstatistics.gapstatistics import GapStatistics  # Optimal Number of Clusters
 from libmr import MR as meta_recognition_tools  # Weibull Fitting
@@ -126,13 +127,15 @@ class Meros:
         self.weibull_models = None
         self.n_revised_classes = None
 
-    def _message(self, message: str):
+    def _message(self, message: str, is_warning: bool=False):
         """Prints process update/message if verbose is toggled to True.
 
         Args:
             message (str): Message to print.
         """
-        if self.verbose:
+        if is_warning:
+            warn(message)
+        elif self.verbose:
             print(message)
 
     def _compute_class_activations_dict(
@@ -163,18 +166,16 @@ class Meros:
         """
         activations = np.array(activations)
         class_activations = {}
+        for i in range(activations.shape[1]):
+            class_activations[i] = []
         for index in range(activations.shape[0]):
             activation = activations[index]
             if targets is not None:
                 target = targets[index]
             else:
                 target = np.argmax(activation) 
-            if np.argmax(activation) != target:
-                continue
-            elif target in class_activations:
+            if np.argmax(activation) == target:
                 class_activations[target].append(activation)
-            else:
-                class_activations[target] = [activation]
         for key, val in class_activations.items():
             class_activations[key] = np.array(val)
         return class_activations
@@ -203,6 +204,9 @@ class Meros:
         """
 
         if method == "gapstat":
+            max_clusters = min([max_clusters, activations.shape[0]])
+            if max_clusters==0:
+                return 0
             gap_statistic_optimizer = GapStatistics(pca_sampling=False)
             n_clusters_opt = gap_statistic_optimizer.fit_predict(
                 max_clusters, activations
@@ -215,7 +219,7 @@ class Meros:
 
         if n_clusters_opt == max_clusters:
             self._message(
-                "WARNING: Optimal cluster number coincides with provided maximum n_clusters."
+                "Optimal cluster number coincides with provided maximum n_clusters.", True
             )
         return n_clusters_opt
 
@@ -249,11 +253,13 @@ class Meros:
 
         if n_clusters == "mav":
             for key in class_activations.keys():
-                n_centroids_dict[key] = 1
+                n_centroids_dict[key] = 1 if class_activations[key].shape[0]!=0 else 0
 
         elif isinstance(n_clusters, int):
             for key in class_activations.keys():
                 n_centroids_dict[key] = n_clusters
+                if n_clusters<0:
+                    raise ValueError('n_clusters is a negative number.')
 
         elif isinstance(n_clusters, str):
             for key, activations in class_activations.items():
@@ -262,7 +268,8 @@ class Meros:
                 )
         elif isinstance(n_clusters, dict):
             n_centroids_dict = n_clusters
-
+            if sorted([i for i in n_clusters.keys()])!= sorted([j for j in class_activations.keys()]):
+                raise ValueError('Mis-input for n_clusters dictionary. Check target keys.')
         else:
             raise ValueError(
                 'Unsupported method n_clusters. Use "gapstat" or "mav" or specify cluster numbers (see documentation.)'
@@ -283,6 +290,9 @@ class Meros:
         centroids = {}
         for target, activations in class_activations.items():
             n_clusters = int(class_n_centroids[target])
+            if n_clusters == 0:
+                centroids[target] = 'NO_CENTROIDS'
+                continue
             kmeans_clusterer = KMeans(n_clusters, n_init='auto')
             kmeans_clusterer.fit(activations)
             centroids[target] = kmeans_clusterer.cluster_centers_
@@ -314,7 +324,7 @@ class Meros:
                 ]
                 nearest_center_distance = np.min(center_distances)
                 distances.append(nearest_center_distance)
-            class_distances[target] = distances
+            class_distances[target] = np.array(distances)
         return class_distances
 
     def _compute_weibull_models(
@@ -339,9 +349,13 @@ class Meros:
         """
         class_weibull_parameters = {}
         for target, distances in class_distances.items():
+            if distances.shape[0] == 0:
+                class_weibull_parameters[target] = '000'
+                self._message(f'No class instances for target {target}. Class will not be revised.', True)
+                continue
             weibull_tail = weibull_tail_dict[target]
             mr_object = meta_recognition_tools()
-            mr_object.fit_high(np.array(distances), weibull_tail)
+            mr_object.fit_high(distances, weibull_tail)
             wb_model = np.array([param for param in mr_object.get_params()])
             wb_median = weibull_median(
                 wb_model[1], wb_model[0], wb_model[2] * wb_model[3]
@@ -350,6 +364,53 @@ class Meros:
             class_weibull_parameters[target] = wb_model
         self.weibull_models = class_weibull_parameters
 
+    def _check_activations(
+            activations: Union[
+                Dict[int, NDArray],
+                List[List[float]],
+                NDArray[np.float64],
+                List[NDArray[np.float64]],
+            ],
+            targets: Union[List[float], NDArray[np.float64], None]
+    ):
+        """Make sure the model is fitted on a well-conditioned training set.
+
+        Args:
+            activations (Union[ Dict[int, NDArray], List[List[float]], NDArray[np.float64], List[NDArray[np.float64]], ]): See Meros.fit
+            targets (Union[List[float], NDArray[np.float64], None]): See Meros.fit
+
+        Raises:
+            ValueError: Activations and/or target input issues.
+        """
+        ill_conditioned_activations_message = 'You must fix one or more of the following issues:\n'
+        ill_conditioned_activations_message += '- You specified a dictionary (target: [activations]) but have not specified all targets including empty ones.\n'
+        ill_conditioned_activations_message += '- You specified a dictionary (target: [activations]) but the targets are not exactly the indices of each activation/feature array - the list of targets should like 0,1,...,n_features-1 .\n'
+        ill_conditioned_activations_message += '- You specified activations that are not ArrayLike.\n'
+        ill_conditioned_activations_message += '- You specified the targets but the targets are not exactly the indices of each activation/feature array - the list of targets should like 0,1,...,n_features-1 .\n'
+        ill_conditioned_activations_message += '- Target type error.'
+        if isinstance(activations, dict):
+            target_list = np.array(sorted([i for i in activations.keys()]))
+            expected_target_list = np.arange(activations.shape[1])
+            if expected_target_list.shape != target_list.shape:
+                raise ValueError(ill_conditioned_activations_message)
+            else:
+                for i in range(expected_target_list.shape[0]):
+                    if expected_target_list[i]!=target_list[i]:
+                        raise ValueError(ill_conditioned_activations_message)
+        else:
+            try:
+                activations_array = np.array(activations)
+            except:
+                raise ValueError(ill_conditioned_activations_message)
+            if targets is not None:
+                if np.max(targets) > activations_array.shape[1] or np.min(targets) < 0:
+                    raise ValueError(ill_conditioned_activations_message)
+                for target in targets:
+                    if isinstance(target, int):
+                        continue
+                    else:
+                        raise ValueError(ill_conditioned_activations_message)
+                    
     def fit(
         self,
         activations: Union[
@@ -415,12 +476,13 @@ class Meros:
         No return, model fitted and ready for open-space risk control at test time. See revise method.
         """
         self._reset()
+        self._check_activations(activations, targets)
         if isinstance(activations, dict):
-            class_activations = np.array(activations)
+            class_activations = activations
         else:
             if targets is None:
                 self._message(
-                    "Targets not given. Assuming all activations yield correct classification."
+                    "!!! Targets not given. Assuming all activations yield correct classification !!!"
                 )
             class_activations = self._compute_class_activations_dict(activations)
 
@@ -448,7 +510,7 @@ class Meros:
         self._compute_weibull_models(distances, weibull_tail_dict)
         if n_revised_classes is None:
             self._message(
-                "No specified number of top activations to revise; calibrated to revise all activations with decreasing effect."
+                "No specified number of top activations to revise; calibrated to revise all activations with decreasing effect. See documentation."
             )
             self.n_revised_classes = activations.shape[1]
         else:
@@ -471,6 +533,8 @@ class Meros:
         unknown_activation = 0
         for i in range(self.n_revised_classes):
             target = sorted_indices[i]
+            if self.weibull_models[target] == '000':
+                continue
             shape = self.weibull_models[target][1]
             scale = self.weibull_models[target][0]
             shift = self.weibull_models[target][2] * self.weibull_models[target][3]
@@ -510,7 +574,7 @@ class Meros:
             (or probability if softmaxed.)
         """
         self._message(
-            f"Note that largest index (one more than maximum provided target index at fitting time) is UNKNOWN/REJECTED."
+            f"Note: Largest index feature (one more than maximum provided target index at fitting time) allocated for UNKNOWN/REJECTED."
         )
         test_vectors = np.array(test_activations)
         revised_activations = np.zeros(
