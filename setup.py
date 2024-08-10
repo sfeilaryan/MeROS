@@ -8,7 +8,7 @@ with open("requirements.txt", "r") as file:
 
 setup(
     name="meros",
-    version="0.0.3",
+    version="0.0.4",
     packages=find_packages(),
     license="BSD-3-Clause",
     install_requires=requirements,
@@ -16,5 +16,5 @@ setup(
     long_description_content_type="text/markdown",
     author="Ryan Sfeila",
     author_email="ryansfeila@gmail.com",
-    url="https://github.com/sfeilaryan/MeROS",
+    url="https://github.com/sfeilaryan/MeROS"
 )

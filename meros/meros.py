@@ -164,17 +164,17 @@ class Meros:
         activations = np.array(activations)
         class_activations = {}
         for index in range(activations.shape[0]):
+            activation = activations[index]
             if targets is not None:
                 target = targets[index]
             else:
-                target = np.argmax(activation)
-            activation = activations[index]
+                target = np.argmax(activation) 
             if np.argmax(activation) != target:
                 continue
-            elif activation in class_activations:
-                class_activations[target] = [activation]
+            elif target in class_activations:
+                class_activations[target].append(activation)
             else:
-                class_activations.append(activation)
+                class_activations[target] = [activation]
         for key, val in class_activations.items():
             class_activations[key] = np.array(val)
         return class_activations
@@ -283,7 +283,7 @@ class Meros:
         centroids = {}
         for target, activations in class_activations.items():
             n_clusters = int(class_n_centroids[target])
-            kmeans_clusterer = KMeans(n_clusters)
+            kmeans_clusterer = KMeans(n_clusters, n_init='auto')
             kmeans_clusterer.fit(activations)
             centroids[target] = kmeans_clusterer.cluster_centers_
         self.centroids = centroids
@@ -340,8 +340,9 @@ class Meros:
         class_weibull_parameters = {}
         for target, distances in class_distances.items():
             weibull_tail = weibull_tail_dict[target]
-            mr_object = meta_recognition_tools.fit_high(distances, weibull_tail)
-            wb_model = mr_object.get_params()
+            mr_object = meta_recognition_tools()
+            mr_object.fit_high(np.array(distances), weibull_tail)
+            wb_model = np.array([param for param in mr_object.get_params()])
             wb_median = weibull_median(
                 wb_model[1], wb_model[0], wb_model[2] * wb_model[3]
             )
@@ -413,6 +414,7 @@ class Meros:
 
         No return, model fitted and ready for open-space risk control at test time. See revise method.
         """
+        self._reset()
         if isinstance(activations, dict):
             class_activations = np.array(activations)
         else:
@@ -432,23 +434,25 @@ class Meros:
             class_activations, n_centers, n_max_clusters
         )
         self._compute_centroids(class_activations, n_centroids)
-        distances = self._compute_distances(self.class_activations, self.centroids)
+        distances = self._compute_distances(class_activations, self.centroids)
         if (not (weibull_tail_isfraction)) and (not (isinstance(weibull_tail, int))):
             raise ValueError("Provide fraction argument or whole number")
 
         weibull_tail_dict = {}
         if weibull_tail_isfraction:
-            for target, activations in class_activations:
+            for target, activations in class_activations.items():
                 weibull_tail_dict[target] = int(weibull_tail * activations.shape[0])
         else:
-            for target, activations in class_activations:
+            for target, activations in class_activations.items():
                 weibull_tail_dict[target] = int(weibull_tail)
         self._compute_weibull_models(distances, weibull_tail_dict)
         if n_revised_classes is None:
             self._message(
                 "No specified number of top activations to revise; calibrated to revise all activations with decreasing effect."
             )
-            self.n_revised_classes = max([i for i in self.class_activations.keys()])
+            self.n_revised_classes = activations.shape[1]
+        else:
+            self.n_revised_classes = n_revised_classes
 
     def _revise_vector(self, test_av: NDArray[np.float64]) -> NDArray[np.float64]:
         """Perform OpenMax activation revision and compute an activation for the class of unknown unknowns.
@@ -482,14 +486,11 @@ class Meros:
             evaluated_cdf = weibull_cdf(distance, shape, scale, shift)
             shift_from_median = distance - median
             opposite_cdf = weibull_cdf(median - shift_from_median, shape, scale, shift)
-            revision_coefficient = (np.abs(evaluated_cdf - opposite_cdf)) * (
-                1 - i / self.n_revised_classes
-            )
-            revised_av[target] *= 1 - revision_coefficient
-            unknown_activation += test_av[target] * (revision_coefficient)
+            revision_coefficient = (np.abs(evaluated_cdf - opposite_cdf)) * (1 - i / self.n_revised_classes)
+            revised_av[target] *= (1 - revision_coefficient)
+            unknown_activation += (test_av[target] * (revision_coefficient))
 
         revised_av[-1] = unknown_activation
-
         return revised_av
 
     def revise(
@@ -543,7 +544,7 @@ class Meros:
             f"Using rejection probability threshold : {threshold}. Note that -1 is UNKNOWN/REJECTED."
         )
         max_known_target = np.max([i for i in self.weibull_models.keys()])
-        inferences = np.zeros()
+        inferences = np.zeros(test_activations.shape[0])
         revised_probabilities = self.revise(test_activations, True)
         for i in range(revised_probabilities.shape[0]):
             inference = np.argmax(revised_probabilities[i])
