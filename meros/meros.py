@@ -96,7 +96,7 @@ def weibull_median(shape: float, scale: float, threshold: float) -> float:
     return median
 
 
-class Meros:
+class OpenSet:
     """
     Interface for calibration based on EVT as well as vector revision based
     on Bendale's formal solution to Open-Set recognition along with our own modifications
