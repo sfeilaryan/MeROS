@@ -8,10 +8,11 @@ with open("requirements.txt", "r") as file:
 
 setup(
     name="meros",
-    version="0.0.6",
+    version="0.0.7",
     packages=find_packages(),
     license="BSD-3-Clause",
     install_requires=requirements,
+    python_requires=">=3.9, <3.10",
     description="Meta-Recognition Tools for Open-Set Recognition",
     long_description=long_description,
     long_description_content_type="text/markdown",
