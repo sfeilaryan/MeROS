@@ -127,7 +127,7 @@ class OpenSet:
         self.weibull_models = None
         self.n_revised_classes = None
 
-    def _message(self, message: str, is_warning: bool=False):
+    def _message(self, message: str, is_warning: bool = False):
         """Prints process update/message if verbose is toggled to True.
 
         Args:
@@ -173,7 +173,7 @@ class OpenSet:
             if targets is not None:
                 target = targets[index]
             else:
-                target = np.argmax(activation) 
+                target = np.argmax(activation)
             if np.argmax(activation) == target:
                 class_activations[target].append(activation)
         for key, val in class_activations.items():
@@ -205,7 +205,7 @@ class OpenSet:
 
         if method == "gapstat":
             max_clusters = min([max_clusters, activations.shape[0]])
-            if max_clusters==0:
+            if max_clusters == 0:
                 return 0
             gap_statistic_optimizer = GapStatistics(pca_sampling=False)
             n_clusters_opt = gap_statistic_optimizer.fit_predict(
@@ -219,7 +219,8 @@ class OpenSet:
 
         if n_clusters_opt == max_clusters:
             self._message(
-                "Optimal cluster number coincides with provided maximum n_clusters.", True
+                "Optimal cluster number coincides with provided maximum n_clusters.",
+                True,
             )
         return n_clusters_opt
 
@@ -253,13 +254,13 @@ class OpenSet:
 
         if n_clusters == "mav":
             for key in class_activations.keys():
-                n_centroids_dict[key] = 1 if class_activations[key].shape[0]!=0 else 0
+                n_centroids_dict[key] = 1 if class_activations[key].shape[0] != 0 else 0
 
         elif isinstance(n_clusters, int):
             for key in class_activations.keys():
                 n_centroids_dict[key] = n_clusters
-                if n_clusters<0:
-                    raise ValueError('n_clusters is a negative number.')
+                if n_clusters < 0:
+                    raise ValueError("n_clusters is a negative number.")
 
         elif isinstance(n_clusters, str):
             for key, activations in class_activations.items():
@@ -268,8 +269,12 @@ class OpenSet:
                 )
         elif isinstance(n_clusters, dict):
             n_centroids_dict = n_clusters
-            if sorted([i for i in n_clusters.keys()])!= sorted([j for j in class_activations.keys()]):
-                raise ValueError('Mis-input for n_clusters dictionary. Check target keys.')
+            if sorted([i for i in n_clusters.keys()]) != sorted(
+                [j for j in class_activations.keys()]
+            ):
+                raise ValueError(
+                    "Mis-input for n_clusters dictionary. Check target keys."
+                )
         else:
             raise ValueError(
                 'Unsupported method n_clusters. Use "gapstat" or "mav" or specify cluster numbers (see documentation.)'
@@ -291,9 +296,9 @@ class OpenSet:
         for target, activations in class_activations.items():
             n_clusters = int(class_n_centroids[target])
             if n_clusters == 0:
-                centroids[target] = 'NO_CENTROIDS'
+                centroids[target] = "NO_CENTROIDS"
                 continue
-            kmeans_clusterer = KMeans(n_clusters, n_init='auto')
+            kmeans_clusterer = KMeans(n_clusters, n_init="auto")
             kmeans_clusterer.fit(activations)
             centroids[target] = kmeans_clusterer.cluster_centers_
         self.centroids = centroids
@@ -350,8 +355,11 @@ class OpenSet:
         class_weibull_parameters = {}
         for target, distances in class_distances.items():
             if distances.shape[0] == 0:
-                class_weibull_parameters[target] = '000'
-                self._message(f'No class instances for target {target}. Class will not be revised.', True)
+                class_weibull_parameters[target] = "000"
+                self._message(
+                    f"No class instances for target {target}. Class will not be revised.",
+                    True,
+                )
                 continue
             weibull_tail = weibull_tail_dict[target]
             mr_object = meta_recognition_tools()
@@ -365,13 +373,14 @@ class OpenSet:
         self.weibull_models = class_weibull_parameters
 
     def _check_activations(
-            activations: Union[
-                Dict[int, NDArray],
-                List[List[float]],
-                NDArray[np.float64],
-                List[NDArray[np.float64]],
-            ],
-            targets: Union[List[float], NDArray[np.float64], None]
+        self,
+        activations: Union[
+            Dict[int, NDArray],
+            List[List[float]],
+            NDArray[np.float64],
+            List[NDArray[np.float64]],
+        ],
+        targets: Union[List[float], NDArray[np.float64], None],
     ):
         """Make sure the model is fitted on a well-conditioned training set.
 
@@ -382,12 +391,16 @@ class OpenSet:
         Raises:
             ValueError: Activations and/or target input issues.
         """
-        ill_conditioned_activations_message = 'You must fix one or more of the following issues:\n'
-        ill_conditioned_activations_message += '- You specified a dictionary (target: [activations]) but have not specified all targets including empty ones.\n'
-        ill_conditioned_activations_message += '- You specified a dictionary (target: [activations]) but the targets are not exactly the indices of each activation/feature array - the list of targets should like 0,1,...,n_features-1 .\n'
-        ill_conditioned_activations_message += '- You specified activations that are not ArrayLike.\n'
-        ill_conditioned_activations_message += '- You specified the targets but the targets are not exactly the indices of each activation/feature array - the list of targets should like 0,1,...,n_features-1 .\n'
-        ill_conditioned_activations_message += '- Target type error.'
+        ill_conditioned_activations_message = (
+            "You must fix one or more of the following issues:\n"
+        )
+        ill_conditioned_activations_message += "- You specified a dictionary (target: [activations]) but have not specified all targets including empty ones.\n"
+        ill_conditioned_activations_message += "- You specified a dictionary (target: [activations]) but the targets are not exactly the indices of each activation/feature array - the list of targets should like 0,1,...,n_features-1 .\n"
+        ill_conditioned_activations_message += (
+            "- You specified activations that are not ArrayLike.\n"
+        )
+        ill_conditioned_activations_message += "- You specified the targets but the targets are not exactly the indices of each activation/feature array - the list of targets should like 0,1,...,n_features-1 .\n"
+        ill_conditioned_activations_message += "- Target type error."
         if isinstance(activations, dict):
             target_list = np.array(sorted([i for i in activations.keys()]))
             expected_target_list = np.arange(activations.shape[1])
@@ -395,7 +408,7 @@ class OpenSet:
                 raise ValueError(ill_conditioned_activations_message)
             else:
                 for i in range(expected_target_list.shape[0]):
-                    if expected_target_list[i]!=target_list[i]:
+                    if expected_target_list[i] != target_list[i]:
                         raise ValueError(ill_conditioned_activations_message)
         else:
             try:
@@ -410,7 +423,7 @@ class OpenSet:
                         continue
                     else:
                         raise ValueError(ill_conditioned_activations_message)
-                    
+
     def fit(
         self,
         activations: Union[
@@ -533,7 +546,7 @@ class OpenSet:
         unknown_activation = 0
         for i in range(self.n_revised_classes):
             target = sorted_indices[i]
-            if self.weibull_models[target] == '000':
+            if isinstance(self.weibull_models[target], str):
                 continue
             shape = self.weibull_models[target][1]
             scale = self.weibull_models[target][0]
@@ -550,9 +563,11 @@ class OpenSet:
             evaluated_cdf = weibull_cdf(distance, shape, scale, shift)
             shift_from_median = distance - median
             opposite_cdf = weibull_cdf(median - shift_from_median, shape, scale, shift)
-            revision_coefficient = (np.abs(evaluated_cdf - opposite_cdf)) * (1 - i / self.n_revised_classes)
-            revised_av[target] *= (1 - revision_coefficient)
-            unknown_activation += (test_av[target] * (revision_coefficient))
+            revision_coefficient = (np.abs(evaluated_cdf - opposite_cdf)) * (
+                1 - i / self.n_revised_classes
+            )
+            revised_av[target] *= 1 - revision_coefficient
+            unknown_activation += test_av[target] * (revision_coefficient)
 
         revised_av[-1] = unknown_activation
         return revised_av
