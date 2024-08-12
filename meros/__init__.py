@@ -1,2 +1,2 @@
 ## __init__.py
-from .meros import Meros
+from .meros import OpenSet

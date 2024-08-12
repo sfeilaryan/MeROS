@@ -8,13 +8,14 @@ with open("requirements.txt", "r") as file:
 
 setup(
     name="meros",
-    version="0.0.5",
+    version="0.0.6",
     packages=find_packages(),
     license="BSD-3-Clause",
     install_requires=requirements,
+    description="Meta-Recognition Tools for Open-Set Recognition",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Ryan Sfeila",
     author_email="ryansfeila@gmail.com",
-    url="https://github.com/sfeilaryan/MeROS"
+    url="https://github.com/sfeilaryan/MeROS",
 )
