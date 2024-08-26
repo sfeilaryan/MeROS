@@ -403,7 +403,7 @@ class OpenSet:
         ill_conditioned_activations_message += "- Target type error."
         if isinstance(activations, dict):
             target_list = np.array(sorted([i for i in activations.keys()]))
-            expected_target_list = np.arange(activations.shape[1])
+            expected_target_list = np.arange(activations[target_list[0]].shape[1])
             if expected_target_list.shape != target_list.shape:
                 raise ValueError(ill_conditioned_activations_message)
             else:
@@ -525,7 +525,7 @@ class OpenSet:
             self._message(
                 "No specified number of top activations to revise; calibrated to revise all activations with decreasing effect. See documentation."
             )
-            self.n_revised_classes = activations.shape[1]
+            self.n_revised_classes = class_activations[0].shape[1]
         else:
             self.n_revised_classes = n_revised_classes
 
@@ -589,7 +589,7 @@ class OpenSet:
             (or probability if softmaxed.)
         """
         self._message(
-            f"Note: Largest index feature (one more than maximum provided target index at fitting time) allocated for UNKNOWN/REJECTED."
+            "Note: Largest index feature (one more than maximum provided target index at fitting time) allocated for UNKNOWN/REJECTED."
         )
         test_vectors = np.array(test_activations)
         revised_activations = np.zeros(
