@@ -9,6 +9,14 @@ Available on PyPI with very weak dependencies (check out `requirements.txt` for 
 ```
 pip install meros
 ```
+### Important
+
+Please make sure you have the Python development headers from `python-dev` installed <b>system-wide</b>. On macOS, Homebrew ensures them. You will notice they are missing if you encounter an error as you try to install `libMR`, which requires an API for C extension. You can install these headers on Linux using:
+```
+sudo apt-get install python3-dev
+```
+
+Instead of `python-3`, you can specify your Python version in `X.X` form if you have several Python versions to power different (virtual) environments. Once yo have these headers, you should be fine on the supported Python versions (3.8-3.9 for now.)
 
 ## Motivation & Preliminary Information
 Typical neural networks used for classification tasks and problems are limited to closed-set classification by nature. The typical output activations resultant from a test input are usually converted to a discrete probability distribution reflecting the model's relative confidences exclusively over the classes or targets it has encountered at training time. Hence, feeding the model an input that doesn't correspond to any of the target classes still results in confidences over the aforementioned target classes that add up to 1 as a result of the softmax operation applied on the model's penultimate layer. In a lot of real-world deployment settings, our models can and will encounter new behavior it has not encountered at training time and should know to detect/reject/signal these events for designer investigation and a possible reconsideration of the model's training. This is the heart of open-set classification and recognition. 
