@@ -8,3 +8,4 @@ scipy
 threadpoolctl
 matplotlib
 matplotlib-inline
+setuptools
